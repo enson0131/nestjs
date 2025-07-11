@@ -1,4 +1,5 @@
-import express, { Express } from 'express';
+import * as express from 'express';
+import { Express } from 'express';
 
 export class NestApplication {
   private readonly app: Express = express();
