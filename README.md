@@ -44,3 +44,16 @@ $ yarn run test:e2e
 $ yarn run test:cov
 ```
 
+
+
+## 原理
+1. 获取 AppModule，通过 Reflect 获取 AppModule 的 controllers 属性
+2. 遍历 controllers 属性，获取每个 controller 的 prefix 属性
+3. 遍历每个 controller 的 methods 属性，获取每个 method 的 path 属性
+4. 根据 path 属性，创建一个路由
+5. 将路由添加到 express 的 router 中
+6. 启动 express 服务
+
+
+
+ 

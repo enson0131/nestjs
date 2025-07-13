@@ -1,14 +1,41 @@
+import 'reflect-metadata';
 import * as express from 'express';
 import { Express } from 'express';
 
 export class NestApplication {
   private readonly app: Express = express();
-  private readonly module: unknown;
-  constructor(module: any) {
-    this.module = module; // 保存模块
-    console.log(this.module); // 打印模块
-  }
+  constructor(protected readonly module) {}
+
   async init() {
+    const Controllers = Reflect.getMetadata('controllers', this.module) || [];
+
+    for (const Controller of Controllers) {
+      const controller = new Controller();
+      const prefix = Reflect.getMetadata('prefix', Controller) || '/';
+      console.log(`prefix--->`, prefix);
+
+      console.log(
+        `controller-->111`,
+        Object.getOwnPropertyNames(Object.getPrototypeOf(controller)),
+      );
+      for (const action of Object.getOwnPropertyNames(
+        Object.getPrototypeOf(controller),
+      )) {
+        if (action === 'constructor') {
+          continue;
+        }
+
+        if (typeof controller[action] !== 'function') {
+          continue;
+        }
+
+        const path = Reflect.getMetadata('path', controller[action]) || '/';
+        const method = Reflect.getMetadata('method', controller[action]);
+        console.log(`action--->`, action);
+        console.log(`path--->`, path);
+        console.log(`method--->`, method);
+      }
+    }
     // 初始化应用
     // 1. 加载模块
     // 2. 加载中间件
