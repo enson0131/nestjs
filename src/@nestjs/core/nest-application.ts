@@ -1,39 +1,47 @@
 import 'reflect-metadata';
 import * as express from 'express';
 import { Express } from 'express';
+import { Logger } from './logger';
 
 export class NestApplication {
   private readonly app: Express = express();
   constructor(protected readonly module) {}
 
   async init() {
-    const Controllers = Reflect.getMetadata('controllers', this.module) || [];
+    const controllers = Reflect.getMetadata('controllers', this.module) || [];
+    Logger.log(`AppModule dependencies initialized`, 'InstanceLoader');
 
-    for (const Controller of Controllers) {
+    for (const Controller of controllers) {
       const controller = new Controller();
       const prefix = Reflect.getMetadata('prefix', Controller) || '/';
-      console.log(`prefix--->`, prefix);
 
-      console.log(
-        `controller-->111`,
-        Object.getOwnPropertyNames(Object.getPrototypeOf(controller)),
-      );
-      for (const action of Object.getOwnPropertyNames(
-        Object.getPrototypeOf(controller),
+      Logger.log(`${Controller.name} {${prefix}}`, 'RoutesResolver');
+      const controllerPrototype = Object.getPrototypeOf(controller);
+
+      for (const methodName of Object.getOwnPropertyNames(
+        controllerPrototype,
       )) {
-        if (action === 'constructor') {
+        const method = controllerPrototype[methodName];
+        const pathMetadata = Reflect.getMetadata('path', method);
+        const httpMethod = Reflect.getMetadata('method', method);
+
+        if (!httpMethod) {
           continue;
         }
 
-        if (typeof controller[action] !== 'function') {
-          continue;
-        }
+        // 拼接出完整路由
+        const routePath = path.posix.join('/', prefix, pathMetadata);
 
-        const path = Reflect.getMetadata('path', controller[action]) || '/';
-        const method = Reflect.getMetadata('method', controller[action]);
-        console.log(`action--->`, action);
-        console.log(`path--->`, path);
-        console.log(`method--->`, method);
+        this.app[httpMethod.toLowerCase()](routePath, (req, res, next) => {
+          const result = method.call(controller, req, res, next);
+
+          res.send(result);
+        });
+
+        Logger.log(
+          `Mapped {${routePath}, ${httpMethod}} route`,
+          'RoutesResolver',
+        );
       }
     }
     // 初始化应用
@@ -49,7 +57,10 @@ export class NestApplication {
     await this.init();
     // 调用 express 实例的 listen 方法，启动服务
     this.app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
+      Logger.log(
+        `Application is running on http://localhost:${port}`,
+        'NestApplication',
+      );
     });
   }
 }
